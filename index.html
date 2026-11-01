@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#0d9488">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>کاتالوگ محصولات</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<!-- صفحه راه‌اندازی اتصال (وقتی پیکربندی Supabase ناقص باشد) -->
+<div id="screen-setup" class="login-screen" hidden>
+  <div class="login-card">
+    <div class="login-logo">🔐</div>
+    <h1 class="login-title">راه‌اندازی اتصال</h1>
+    <p class="login-sub">برای فعال‌سازی ورود کاربران، اتصال به سرویس Supabase لازم است. مقادیر را از Supabase → Settings → API کپی کنید.</p>
+    <div class="set-row">
+      <label for="setup-url">Supabase URL</label>
+      <input type="text" id="setup-url" placeholder="https://XXXX.supabase.co" dir="ltr" style="text-align:left" autocomplete="off">
+    </div>
+    <div class="set-row">
+      <label for="setup-key">Supabase publishable key</label>
+      <input type="text" id="setup-key" placeholder="sb_publishable_..." dir="ltr" style="text-align:left" autocomplete="off">
+    </div>
+    <div id="setup-status" class="login-status" hidden></div>
+    <button class="btn btn-primary btn-lg" id="setup-save" style="margin-top:6px">ذخیره و ادامه</button>
+    <div class="info-note" style="margin-top:12px">
+      کلید publishable عمومی است؛ امنیت اطلاعات با Row Level Security در سرور تضمین می‌شود. هرگز کلید service_role را وارد نکنید.
+    </div>
+  </div>
+</div>
+
+<!-- صفحه ورود / ساخت حساب -->
+<div id="screen-login" class="login-screen" hidden>
+  <div class="login-card">
+    <div class="login-logo">📦</div>
+    <h1 class="login-title">کاتالوگ محصولات</h1>
+    <p class="login-sub">برای مشاهده کاتالوگ وارد حساب خود شوید.</p>
+    <button id="install-fab" hidden style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px;margin-bottom:6px;border:none;border-radius:12px;background:#16a34a;color:#fff;font-size:14px;cursor:pointer">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+      نصب برنامه روی گوشی
+    </button>
+    <div class="set-row">
+      <label for="login-name">نام (برای حساب جدید)</label>
+      <input type="text" id="login-name" placeholder="مثلاً: احمدی" autocomplete="off">
+    </div>
+    <div class="set-row">
+      <label for="login-company-code">کد شرکت (برای ورود و ساخت حساب)</label>
+      <input type="text" id="login-company-code" placeholder="" autocomplete="off" dir="ltr" style="text-align:left">
+    </div>
+    <div class="set-row">
+      <label for="login-email">ایمیل</label>
+      <input type="email" id="login-email" inputmode="email" placeholder="you@example.com" autocomplete="off" dir="ltr" style="text-align:left">
+    </div>
+    <div class="set-row">
+      <label for="login-pass">رمز عبور</label>
+      <input type="password" id="login-pass" placeholder="••••••••" dir="ltr" style="text-align:left">
+    </div>
+    <div id="login-status" class="login-status" hidden></div>
+    <button class="btn btn-primary btn-lg" id="login-submit" style="margin-top:6px">ورود به حساب</button>
+    <button class="btn btn-ghost btn-lg" id="register-submit" style="margin-top:10px">ساخت حساب جدید</button>
+    <div class="info-note" style="margin-top:12px">
+      ورود فقط با کد شرکت امکان‌پذیر است. کد را از مدیر مجموعه بگیرید.
+    </div>
+  </div>
+</div>
+
+<div id="app">
+
+  <header id="topbar">
+    <button id="btn-back" class="icon-btn" aria-label="بازگشت" hidden>
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <h1 id="topbar-title">کاتالوگ محصولات</h1>
+    <div id="topbar-actions"></div>
+  </header>
+
+  <main id="main">
+
+    <!-- ================= کاتالوگ ================= -->
+    <section id="screen-home" class="screen active">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="cat-search" type="search" placeholder="جستجو: نام، کد یا توضیحات محصول…" autocomplete="off" enterkeyhint="search">
+      </div>
+      <div id="cat-tools" class="cat-tools" hidden>
+        <div class="seg">
+          <button type="button" id="tab-all" class="seg-btn active">همه</button>
+          <button type="button" id="tab-noimg" class="seg-btn">بدون عکس</button>
+        </div>
+        <button type="button" id="sel-toggle" class="btn btn-ghost btn-sm">☑ انتخاب</button>
+      </div>
+      <div id="cat-count" class="result-count"></div>
+      <div id="cat-grid" class="cat-grid"></div>
+      <div id="cat-sentinel" class="cat-sentinel"></div>
+      <div id="cat-empty" class="empty-state" hidden>
+        <div class="empty-icon">📦</div>
+        <p id="cat-empty-text">محصولی پیدا نشد.</p>
+        <p class="empty-sub" id="cat-empty-sub">بخش دیگری از نام یا کد را امتحان کنید.</p>
+      </div>
+    </section>
+
+    <!-- ================= ویرایش محصول (مدیر) ================= -->
+    <section id="screen-product-edit" class="screen">
+      <div id="product-edit-content"></div>
+    </section>
+
+    <!-- ================= تنظیمات ================= -->
+    <section id="screen-settings" class="screen">
+      <div id="settings-content"></div>
+    </section>
+
+    <!-- ================= مدیریت کاربران (فقط مدیر) ================= -->
+    <section id="screen-admin" class="screen">
+      <div id="admin-content"></div>
+    </section>
+
+    <!-- ================= ابزارهای مدیر محصولات ================= -->
+    <section id="screen-admin-tools" class="screen">
+      <div id="admin-tools-content"></div>
+    </section>
+
+    <!-- ================= راهنما ================= -->
+    <section id="screen-help" class="screen">
+      <div class="help-card">
+        <h3>راهنمای سریع</h3>
+        <ol class="help-list">
+          <li><b>جستجو:</b> در نوار بالای صفحه نام کامل یا بخشی از نام، کد یا توضیحات محصول را بنویسید. نتیجه‌ها همزمان با تایپ نمایش داده می‌شوند.</li>
+          <li><b>مشاهده محصول:</b> روی هر کارت بزنید تا تصویر بزرگ‌تر و توضیحات کامل نمایش داده شود.</li>
+          <li><b>اضافه کردن محصول (مدیر):</b> دکمه «+» پایین صفحه را بزنید، نام، کد و توضیحات را بنویسید و تصویر را انتخاب کنید. تصویر خودکار کوچک و کم‌حجم می‌شود.</li>
+          <li><b>ورود گروهی (مدیر):</b> از «تنظیمات ← ابزارهای محصولات» فایل Excel یا CSV محصولات را وارد کنید، سپس تصاویر را یکجا آپلود کنید (نام هر فایل تصویر = کد محصول).</li>
+          <li><b>آفلاین:</b> آخرین لیست محصولات روی گوشی ذخیره می‌شود و بدون اینترنت قابل جستجو است؛ تصاویر برای نمایش به اینترنت نیاز دارند.</li>
+        </ol>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- دکمه شناور افزودن محصول (فقط مدیر، فقط در صفحه کاتالوگ) -->
+<button id="add-fab" class="add-fab" hidden aria-label="محصول جدید">
+  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<!-- نوار انتخاب و حذف گروهی (فقط مدیر) -->
+<div id="sel-bar" class="sel-bar" hidden>
+  <span id="sel-count" class="sel-count"></span>
+  <button type="button" id="sel-all" class="btn btn-ghost btn-sm">همه نتایج</button>
+  <button type="button" id="sel-delete" class="btn btn-danger btn-sm">🗑 حذف</button>
+  <button type="button" id="sel-cancel" class="btn btn-ghost btn-sm">انصراف</button>
+</div>
+
+<!-- ریشه‌های رابط: شیت، دیالوگ، توست -->
+<div id="sheet-root"></div>
+<div id="dialog-root"></div>
+<div id="toast-root"></div>
+
+<input type="file" id="img-input" accept="image/*" hidden>
+
+<script src="vendor/supabase.min.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/config.js"></script>
+<script src="js/backend.js"></script>
+<script src="js/cache.js"></script>
+<script src="js/imgutil.js"></script>
+<script src="js/search.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
